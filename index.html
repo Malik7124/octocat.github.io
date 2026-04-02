@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Карта воинских частей по федеральным округам</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="control-panel">
+        <div class="panel-head">
+          <div class="service-badge">
+            <span class="service-badge__label">Служебный доступ</span>
+            <strong class="service-badge__title">Окружной реестр воинских частей</strong>
+          </div>
+          <div class="panel-insignia" aria-hidden="true">
+            <div class="insignia-card">
+              <svg viewBox="0 0 64 64" class="insignia-icon">
+                <path d="M32 4 54 12v15c0 15.6-8.9 25.7-22 33C18.9 52.7 10 42.6 10 27V12z" />
+                <path d="M32 15 36.3 26.7 49 27.1l-10.1 7.4 3.8 12L32 39.4l-10.7 7.1 3.8-12L15 27.1l12.7-.4z" class="insignia-detail" />
+              </svg>
+              <span>Окружной контур</span>
+            </div>
+            <div class="insignia-card">
+              <svg viewBox="0 0 64 64" class="insignia-icon">
+                <circle cx="32" cy="22" r="10" />
+                <path d="M18 52c2.8-8.4 7.5-13 14-13s11.2 4.6 14 13" class="insignia-detail" />
+                <path d="M12 25c5-9.7 11.7-14.5 20-14.5S47 15.3 52 25" class="insignia-detail" />
+              </svg>
+              <span>Прокурорский надзор</span>
+            </div>
+          </div>
+          <p class="eyebrow">Внутренний информационный контур</p>
+          <h1>Карта воинских частей по федеральным округам России</h1>
+          <p class="lead">
+            Система предназначена для навигации по окружной структуре, просмотра закрепленных
+            воинских частей и оперативного доступа к сведениям о гарнизонном прокурорском
+            сопровождении.
+          </p>
+        </div>
+
+        <form class="search-form" id="searchForm">
+          <label class="search-label" for="searchInput">Поиск по номеру, городу или гарнизону</label>
+          <div class="search-row">
+            <input
+              id="searchInput"
+              type="text"
+              inputmode="search"
+              placeholder="Например: 50002, Казань или Владивостокский гарнизон"
+            />
+            <button type="submit" class="primary-button">Найти</button>
+          </div>
+          <button type="button" class="ghost-button" id="resetButton">Сбросить фильтры</button>
+          <div class="search-suggestions" id="searchSuggestions"></div>
+        </form>
+
+        <section class="selection-panel" id="selectionPanel">
+          <div class="section-heading">
+            <h2>Текущий выбор</h2>
+            <span id="selectionPanelTag">навигация</span>
+          </div>
+          <h3 class="selection-panel__title" id="selectionPanelTitle">Общий обзор</h3>
+          <p class="selection-panel__text" id="selectionPanelText">
+            Выберите округ или часть на карте, чтобы быстро перейти к связанным данным и управлять текущим фокусом.
+          </p>
+          <div class="selection-panel__meta" id="selectionPanelMeta"></div>
+          <div class="selection-panel__actions">
+            <button type="button" class="ghost-button ghost-button--compact" id="selectionActionPrimary">
+              Показать на карте
+            </button>
+            <button type="button" class="ghost-button ghost-button--compact" id="selectionActionSecondary">
+              Сбросить
+            </button>
+          </div>
+        </section>
+
+        <section class="summary-section">
+          <div class="section-heading">
+            <h2>Сводка</h2>
+            <span>оперативный срез</span>
+          </div>
+          <div class="summary-strip" id="summaryStrip"></div>
+        </section>
+
+        <section class="district-section">
+          <div class="section-heading">
+            <h2>Федеральные округа</h2>
+            <span>навигация по карте</span>
+          </div>
+          <div class="district-list" id="districtList"></div>
+        </section>
+
+        <section class="units-section">
+          <div class="section-heading">
+            <h2>Реестр объектов</h2>
+            <span id="unitsCount"></span>
+          </div>
+          <div class="units-list" id="unitsList"></div>
+        </section>
+
+        <div class="panel-foot">
+          Раздел предназначен для быстрого перехода между округами, объектами учета и
+          сопроводительными сведениями по гарнизонной юрисдикции.
+        </div>
+      </aside>
+
+      <main class="map-stage">
+        <div class="map-glow map-glow--top"></div>
+        <div class="map-glow map-glow--bottom"></div>
+        <div class="map-watermark" aria-hidden="true">
+          <svg viewBox="0 0 64 64" class="map-watermark__icon">
+            <path d="M32 4 54 12v15c0 15.6-8.9 25.7-22 33C18.9 52.7 10 42.6 10 27V12z" />
+            <path d="M32 14 36.7 26.8 50 27.3l-10.6 7.8 4 12.4L32 40.1l-11.4 7.4 4-12.4L14 27.3l13.3-.5z" class="map-watermark__detail" />
+          </svg>
+          <div class="map-watermark__text">
+            <span>Служебная карта</span>
+            <strong>Федеральные округа</strong>
+          </div>
+        </div>
+
+        <div class="topbar">
+          <span class="status-chip status-chip--crest">
+            <svg viewBox="0 0 64 64" class="chip-emblem" aria-hidden="true">
+              <path d="M32 6 53 13v14c0 15.1-8.8 24.9-21 31C19.8 51.9 11 42.1 11 27V13z" />
+              <path d="M32 18v20M22 28h20" class="chip-emblem__line" />
+            </svg>
+            Аналитический реестр
+          </span>
+          <span class="status-chip" id="districtsChip">8 федеральных округов</span>
+          <span class="status-chip" id="unitsChip">56 объектов в реестре</span>
+          <span class="status-chip status-chip--active" id="selectionStatus"></span>
+        </div>
+
+        <div id="map" aria-label="Интерактивная карта федеральных округов и воинских частей"></div>
+
+        <div class="map-legend">
+          <p>Обозначения</p>
+          <div class="legend-row">
+            <span class="legend-swatch legend-swatch--outline"></span>
+            <span>Граница федерального округа</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-swatch legend-swatch--marker"></span>
+            <span>Воинская часть</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-swatch legend-swatch--focus"></span>
+            <span>Текущий фокус выборки</span>
+          </div>
+        </div>
+
+        <section class="inspector">
+          <p class="inspector-kicker">Фокус карты</p>
+          <h2 id="inspectorTitle">Все федеральные округа</h2>
+          <p id="inspectorText"></p>
+          <div class="inspector-metrics" id="inspectorMetrics"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="./districts-data.js"></script>
+    <script src="./units-data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
